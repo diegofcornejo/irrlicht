@@ -52,9 +52,9 @@ const core::stringc& COSOperator::getOperatingSystemVersion() const
 
 
 //! copies text to the clipboard
-void COSOperator::copyToClipboard(const c8* text) const
+void COSOperator::copyToClipboard(const wchar_t* text) const
 {
-	if (strlen(text)==0)
+	if (wcslen(text)==0)
 		return;
 
 // Windows version
@@ -66,25 +66,25 @@ void COSOperator::copyToClipboard(const c8* text) const
 	EmptyClipboard();
 
 	HGLOBAL clipbuffer;
-	char * buffer;
+	wchar_t* buffer;
 
-	clipbuffer = GlobalAlloc(GMEM_DDESHARE, strlen(text)+1);
-	buffer = (char*)GlobalLock(clipbuffer);
+	clipbuffer = GlobalAlloc(GMEM_DDESHARE, sizeof(wchar_t) * (wcslen(text) + 1));
+	buffer = (wchar_t*)GlobalLock(clipbuffer);
 
-	strcpy(buffer, text);
+	wcscpy(buffer, text);
 
 	GlobalUnlock(clipbuffer);
-	SetClipboardData(CF_TEXT, clipbuffer);
+	SetClipboardData(CF_UNICODETEXT, clipbuffer);
 	CloseClipboard();
 
 // MacOSX version
 #elif defined(_IRR_COMPILE_WITH_OSX_DEVICE_)
 
-	OSXCopyToClipboard(text);
+	OSXCopyToClipboard(irr::core::stringc(text).c_str());
 
 #elif defined(_IRR_COMPILE_WITH_X11_DEVICE_)
     if ( IrrDeviceLinux )
-        IrrDeviceLinux->copyToClipboard(text);
+        IrrDeviceLinux->copyToClipboard(irr::core::stringc(text).c_str());
 #else
 
 #endif
@@ -93,7 +93,7 @@ void COSOperator::copyToClipboard(const c8* text) const
 
 //! gets text from the clipboard
 //! \return Returns 0 if no string is in there.
-const c8* COSOperator::getTextFromClipboard() const
+const wchar_t* COSOperator::getTextFromClipboard() const
 {
 #if defined(_IRR_XBOX_PLATFORM_)
 		return 0;
@@ -101,20 +101,20 @@ const c8* COSOperator::getTextFromClipboard() const
 	if (!OpenClipboard(NULL))
 		return 0;
 
-	char * buffer = 0;
+	wchar_t * buffer = 0;
 
-	HANDLE hData = GetClipboardData( CF_TEXT );
-	buffer = (char*)GlobalLock( hData );
+	HANDLE hData = GetClipboardData( CF_UNICODETEXT );
+	buffer = (wchar_t*)GlobalLock( hData );
 	GlobalUnlock( hData );
 	CloseClipboard();
 	return buffer;
 
 #elif defined(_IRR_COMPILE_WITH_OSX_DEVICE_)
-	return (OSXCopyFromClipboard());
+	return irr::core::stringw(OSXCopyFromClipboard()).c_str();
 
 #elif defined(_IRR_COMPILE_WITH_X11_DEVICE_)
     if ( IrrDeviceLinux )
-        return IrrDeviceLinux->getTextFromClipboard();
+        return irr::core::stringw(IrrDeviceLinux->getTextFromClipboard()).c_str();
     return 0;
 
 #else

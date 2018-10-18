@@ -11,6 +11,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#ifdef _MSC_VER
+#pragma warning(disable: 4244)
+#endif
 
 namespace irr
 {
@@ -18,38 +21,14 @@ namespace core
 {
 
 //! Very simple string class with some useful features.
-/** string<c8> and string<wchar_t> both accept Unicode AND ASCII/Latin-1,
-so you can assign Unicode to string<c8> and ASCII/Latin-1 to string<wchar_t>
-(and the other way round) if you want to.
-
-However, note that the conversation between both is not done using any encoding.
-This means that c8 strings are treated as ASCII/Latin-1, not UTF-8, and
-are simply expanded to the equivalent wchar_t, while Unicode/wchar_t
-characters are truncated to 8-bit ASCII/Latin-1 characters, discarding all
-other information in the wchar_t.
+/** string<c8> is encoded as UTF-8.
+string<wchar_t> is encoded as UTF-16 on Windows, UTF-32 on Unix.
+The conversion between them involves encoding and decoding.
 */
-
-enum eLocaleID
-{
-	IRR_LOCALE_ANSI = 0,
-	IRR_LOCALE_GERMAN = 1
-};
-
-static eLocaleID locale_current = IRR_LOCALE_ANSI;
-static inline void locale_set ( eLocaleID id )
-{
-	locale_current = id;
-}
 
 //! Returns a character converted to lower case
 static inline u32 locale_lower ( u32 x )
 {
-	switch ( locale_current )
-	{
-		case IRR_LOCALE_GERMAN:
-		case IRR_LOCALE_ANSI:
-			break;
-	}
 	// ansi
 	return x >= 'A' && x <= 'Z' ? x + 0x20 : x;
 }
@@ -57,17 +36,135 @@ static inline u32 locale_lower ( u32 x )
 //! Returns a character converted to upper case
 static inline u32 locale_upper ( u32 x )
 {
-	switch ( locale_current )
-	{
-		case IRR_LOCALE_GERMAN:
-		case IRR_LOCALE_ANSI:
-			break;
-	}
-
 	// ansi
 	return x >= 'a' && x <= 'z' ? x + ( 'A' - 'a' ) : x;
 }
 
+//
+template<typename T,typename B>
+static u32 conv(const B* src, T* dst, u32 length = 0xffffffff) {
+	u32 l = 0;
+	while(src[l] && l < length - 1) {
+		if(dst) dst[l] = (T)src[l];
+		l++;
+	}
+	if(dst) dst[l] = 0;
+	return l;
+}
+
+template<>
+u32 conv<wchar_t, char>(const char* src, wchar_t* dst, u32 length) {
+	const char* p = src;
+	if(!dst) {
+		u32 l = 0;
+		while(*p != 0 && l < length - 1) {
+			if((*p & 0x80) == 0)
+				p++;
+			else if((*p & 0xe0) == 0xc0)
+				p += 2;
+			else if((*p & 0xf0) == 0xe0)
+				p += 3;
+			else if((*p & 0xf8) == 0xf0) {
+#ifdef _WIN32
+				l++;
+#endif // _WIN32
+				p += 4;
+			} else
+				p++;
+			l++;
+		}
+		return l;
+	} else {
+		wchar_t* wp = dst;
+		while(*p != 0 && (u32)(wp - dst) < length - 1) {
+			if((*p & 0x80) == 0) {
+				*wp = *p;
+				p++;
+			} else if((*p & 0xe0) == 0xc0) {
+				*wp = (((unsigned)p[0] & 0x1f) << 6) | ((unsigned)p[1] & 0x3f);
+				p += 2;
+			} else if((*p & 0xf0) == 0xe0) {
+				*wp = (((unsigned)p[0] & 0xf) << 12) | (((unsigned)p[1] & 0x3f) << 6) | ((unsigned)p[2] & 0x3f);
+				p += 3;
+			} else if((*p & 0xf8) == 0xf0) {
+#ifdef _WIN32
+				unsigned unicode = (((unsigned)p[0] & 0x7) << 18) | (((unsigned)p[1] & 0x3f) << 12) | (((unsigned)p[2] & 0x3f) << 6) | ((unsigned)p[3] & 0x3f);
+				unicode -= 0x10000;
+				*wp++ = (unicode >> 10) | 0xd800;
+				*wp = (unicode & 0x3ff) | 0xdc00;
+#else
+				*wp = (((unsigned)p[0] & 0x7) << 18) | (((unsigned)p[1] & 0x3f) << 12) | (((unsigned)p[2] & 0x3f) << 6) | ((unsigned)p[3] & 0x3f);
+#endif // _WIN32
+				p += 4;
+			} else
+				p++;
+			wp++;
+		}
+		*wp = 0;
+		return wp - dst;
+	}
+}
+
+template<>
+u32 conv<char, wchar_t>(const wchar_t* src, char* dst, u32 length) {
+	const wchar_t* p = src;
+	if(!dst){
+		u32 l = 0;
+		while(*src != 0 && (u32)(src - p) < length - 1) {
+			if(*src < 0x80)
+				l += 1;
+			else if(*src < 0x800)
+				l += 2;
+			else if(*src < 0x10000 && (*src < 0xd800 || *src > 0xdfff))
+				l += 3;
+			else {
+#ifdef _WIN32
+				src++;
+#endif // _WIN32
+				l += 4;
+			}
+			src++;
+		}
+		return l;
+	} else {
+		char* str = dst;
+		while(*src != 0 && (u32)(src - p) < length - 1) {
+			if(*src < 0x80) {
+				*str = *src;
+				++str;
+			} else if(*src < 0x800) {
+				str[0] = ((*src >> 6) & 0x1f) | 0xc0;
+				str[1] = ((*src) & 0x3f) | 0x80;
+				str += 2;
+			} else if(*src < 0x10000 && (*src < 0xd800 || *src > 0xdfff)) {
+				str[0] = ((*src >> 12) & 0xf) | 0xe0;
+				str[1] = ((*src >> 6) & 0x3f) | 0x80;
+				str[2] = ((*src) & 0x3f) | 0x80;
+				str += 3;
+			} else {
+#ifdef _WIN32
+				unsigned unicode = 0;
+				unicode |= (*src++ & 0x3ff) << 10;
+				unicode |= *src & 0x3ff;
+				unicode += 0x10000;
+				str[0] = ((unicode >> 18) & 0x7) | 0xf0;
+				str[1] = ((unicode >> 12) & 0x3f) | 0x80;
+				str[2] = ((unicode >> 6) & 0x3f) | 0x80;
+				str[3] = ((unicode) & 0x3f) | 0x80;
+#else
+				str[0] = ((*src >> 18) & 0x7) | 0xf0;
+				str[1] = ((*src >> 12) & 0x3f) | 0x80;
+				str[2] = ((*src >> 6) & 0x3f) | 0x80;
+				str[3] = ((*src) & 0x3f) | 0x80;
+#endif // _WIN32
+				str += 4;
+			}
+			src++;
+		}
+		*str = 0;
+		return str - dst;
+	}
+}
 
 template <typename T, typename TAlloc = irrAllocator<T> >
 class string
@@ -281,13 +378,12 @@ public:
 			return;
 		}
 
-		allocated = used = length+1;
+		u32 len = conv<T, B>(c, NULL, length) + 1;
+
+		allocated = used = len;
 		array = allocator.allocate(used); // new T[used];
 
-		for (u32 l = 0; l<length; ++l)
-			array[l] = (T)c[l];
-
-		array[length] = 0;
+		conv<T, B>(c, array, length);
 	}
 
 
@@ -356,12 +452,7 @@ public:
 		if ((void*)c == (void*)array)
 			return *this;
 
-		u32 len = 0;
-		const B* p = c;
-		do
-		{
-			++len;
-		} while(*p++);
+		u32 len = conv<T, B>(c, NULL) + 1;
 
 		// we'll keep the old string for a while, because the new
 		// string could be a part of the current string.
@@ -374,8 +465,7 @@ public:
 			array = allocator.allocate(used); //new T[used];
 		}
 
-		for (u32 l = 0; l<len; ++l)
-			array[l] = (T)c[l];
+		conv<T, B>(c, array);
 
 		if (oldArray != array)
 			allocator.deallocate(oldArray); // delete [] oldArray;
@@ -394,9 +484,8 @@ public:
 	}
 
 
-	//! Append operator for strings, ascii and unicode
-	template <class B>
-	string<T,TAlloc> operator+(const B* const c) const
+	//! Append operator for strings
+	string<T,TAlloc> operator+(const T* const c) const
 	{
 		string<T,TAlloc> str(*this);
 		str.append(c);
