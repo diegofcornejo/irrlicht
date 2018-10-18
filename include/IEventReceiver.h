@@ -34,6 +34,9 @@ namespace irr
 		IrrlichtDevice::postEventFromUser. They take the same path as mouse events. */
 		EET_KEY_INPUT_EVENT,
 
+		//! A character input event.
+		EET_CHAR_INPUT_EVENT,
+
 		//! A joystick (joypad, gamepad) input event.
 		/** Joystick events are created by polling all connected joysticks once per
 		device run() and then passing the events to IrrlichtDevice::postEventFromUser.
@@ -315,9 +318,6 @@ struct SEvent
 	//! Any kind of keyboard event.
 	struct SKeyInput
 	{
-		//! Character corresponding to the key (0, if not a character)
-		wchar_t Char;
-
 		//! Key which has been pressed or released
 		EKEY_CODE Key;
 
@@ -329,6 +329,12 @@ struct SEvent
 
 		//! True if ctrl was also pressed
 		bool Control:1;
+	};
+
+	//! Character input event
+	struct SCharInput
+	{
+		wchar_t Char;
 	};
 
 	//! A joystick event.
@@ -417,6 +423,7 @@ struct SEvent
 		struct SGUIEvent GUIEvent;
 		struct SMouseInput MouseInput;
 		struct SKeyInput KeyInput;
+		struct SCharInput CharInput;
 		struct SJoystickEvent JoystickEvent;
 		struct SLogEvent LogEvent;
 		struct SUserEvent UserEvent;

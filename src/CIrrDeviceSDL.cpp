@@ -409,11 +409,18 @@ bool CIrrDeviceSDL::run()
 				}
 #endif
 				irrevent.EventType = irr::EET_KEY_INPUT_EVENT;
-				irrevent.KeyInput.Char = SDL_event.key.keysym.unicode;
 				irrevent.KeyInput.Key = key;
 				irrevent.KeyInput.PressedDown = (SDL_event.type == SDL_KEYDOWN);
 				irrevent.KeyInput.Shift = (SDL_event.key.keysym.mod & KMOD_SHIFT) != 0;
 				irrevent.KeyInput.Control = (SDL_event.key.keysym.mod & KMOD_CTRL ) != 0;
+				postEventFromUser(irrevent);
+			}
+			break;
+
+		case SDL_TEXTINPUT:
+			{
+				irrevent.EventType = irr::EET_CHAR_INPUT_EVENT;
+				irrevent.CharInput.Char = irr::core::stringw(SDL_event.text).c_str();
 				postEventFromUser(irrevent);
 			}
 			break;

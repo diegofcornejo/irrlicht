@@ -1042,10 +1042,12 @@ bool CIrrDeviceLinux::run()
 					char buf[8]={0};
 					XLookupString(&event.xkey, buf, sizeof(buf), &mp.X11Key, NULL);
 
+					irrevent.EventType = irr::EET_CHAR_INPUT_EVENT;
+					irrevent.CharInput.Char = irr::core::stringw(buf).c_str();
+					postEventFromUser(irrevent);
+
 					irrevent.EventType = irr::EET_KEY_INPUT_EVENT;
 					irrevent.KeyInput.PressedDown = (event.type == KeyPress);
-//					mbtowc(&irrevent.KeyInput.Char, buf, sizeof(buf));
-					irrevent.KeyInput.Char = ((wchar_t*)(buf))[0];
 					irrevent.KeyInput.Control = (event.xkey.state & ControlMask) != 0;
 					irrevent.KeyInput.Shift = (event.xkey.state & ShiftMask) != 0;
 

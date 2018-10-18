@@ -305,7 +305,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 */
 //			event.KeyInput.Shift = ((allKeys[VK_SHIFT] & 0x80)!=0);
 //			event.KeyInput.Control = ((allKeys[VK_CONTROL] & 0x80)!=0);
-//			event.KeyInput.Char = (KeyAsc & 0x00ff); //KeyAsc >= 0 ? KeyAsc : 0;
 
 			if (dev)
 				dev->postEventFromUser(event);

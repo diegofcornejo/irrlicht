@@ -20,6 +20,8 @@
 #include "COSOperator.h"
 #include "dimension2d.h"
 #include "IGUISpriteBank.h"
+#include "IGUIEnvironment.h"
+#include "IGUIElement.h"
 #include <winuser.h>
 #if defined(_IRR_COMPILE_WITH_JOYSTICK_EVENTS_)
 #ifdef _IRR_COMPILE_WITH_DIRECTINPUT_JOYSTICK_
@@ -28,6 +30,7 @@
 #ifdef _MSC_VER
 #pragma comment(lib, "dinput8.lib")
 #pragma comment(lib, "dxguid.lib")
+#pragma comment(lib, "imm32.lib")
 #endif
 #else
 #ifdef _MSC_VER
@@ -749,6 +752,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		return 0;
 	}
 
+	{
+		dev = getDeviceFromHWnd(hWnd);
+		if (dev)
+		{
+			irr::gui::IGUIElement* ele = dev->getGUIEnvironment() ? dev->getGUIEnvironment()->getFocus() : 0;
+			if (!ele || (ele->getType() != irr::gui::EGUIET_EDIT_BOX) || !ele->isEnabled())
+			{
+				HIMC hIMC = ImmGetContext(hWnd);
+				if (hIMC)
+				{
+					ImmNotifyIME(hIMC, NI_COMPOSITIONSTR, CPS_COMPLETE, 0);
+					ImmReleaseContext(hWnd, hIMC);
+				}
+				ImmAssociateContextEx(hWnd, NULL, 0);
+			}
+			else
+				ImmAssociateContextEx(hWnd, NULL, IACE_DEFAULT);
+		}
+	}
+
 	switch (message)
 	{
 	case WM_PAINT:
@@ -762,6 +785,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_ERASEBKGND:
 		return 0;
 
+	case WM_CHAR:
+		{
+			if (wParam < 32 || (wParam > 126 && wParam < 160))
+				return 0;
+			event.EventType = irr::EET_CHAR_INPUT_EVENT;
+			event.CharInput.Char = (wchar_t)wParam;
+			dev = getDeviceFromHWnd(hWnd);
+			if (dev)
+				dev->postEventFromUser(event);
+			return 0;
+		}
+
 	case WM_SYSKEYDOWN:
 	case WM_SYSKEYUP:
 	case WM_KEYDOWN:
@@ -773,22 +808,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			event.KeyInput.Key = (irr::EKEY_CODE)wParam;
 			event.KeyInput.PressedDown = (message==WM_KEYDOWN || message == WM_SYSKEYDOWN);
 
-			const UINT MY_MAPVK_VSC_TO_VK_EX = 3; // MAPVK_VSC_TO_VK_EX should be in SDK according to MSDN, but isn't in mine.
 			if ( event.KeyInput.Key == irr::KEY_SHIFT )
 			{
-				// this will fail on systems before windows NT/2000/XP, not sure _what_ will return there instead.
-				event.KeyInput.Key = (irr::EKEY_CODE)MapVirtualKey( ((lParam>>16) & 255), MY_MAPVK_VSC_TO_VK_EX );
+				event.KeyInput.Key = (irr::EKEY_CODE)MapVirtualKey( ((lParam>>16) & 255), MAPVK_VSC_TO_VK_EX );
 			}
 			if ( event.KeyInput.Key == irr::KEY_CONTROL )
 			{
-				event.KeyInput.Key = (irr::EKEY_CODE)MapVirtualKey( ((lParam>>16) & 255), MY_MAPVK_VSC_TO_VK_EX );
+				event.KeyInput.Key = (irr::EKEY_CODE)MapVirtualKey( ((lParam>>16) & 255), MAPVK_VSC_TO_VK_EX );
 				// some keyboards will just return LEFT for both - left and right keys. So also check extend bit.
 				if (lParam & 0x1000000)
 					event.KeyInput.Key = irr::KEY_RCONTROL;
 			}
 			if ( event.KeyInput.Key == irr::KEY_MENU )
 			{
-				event.KeyInput.Key = (irr::EKEY_CODE)MapVirtualKey( ((lParam>>16) & 255), MY_MAPVK_VSC_TO_VK_EX );
+				event.KeyInput.Key = (irr::EKEY_CODE)MapVirtualKey( ((lParam>>16) & 255), MAPVK_VSC_TO_VK_EX );
 				if (lParam & 0x1000000)
 					event.KeyInput.Key = irr::KEY_RMENU;
 			}
@@ -798,26 +831,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			event.KeyInput.Shift = ((allKeys[VK_SHIFT] & 0x80)!=0);
 			event.KeyInput.Control = ((allKeys[VK_CONTROL] & 0x80)!=0);
 
-			// Handle unicode and deadkeys in a way that works since Windows 95 and nt4.0
-			// Using ToUnicode instead would be shorter, but would to my knowledge not run on 95 and 98.
-			WORD keyChars[2];
-			UINT scanCode = HIWORD(lParam);
-			int conversionResult = ToAsciiEx(wParam,scanCode,allKeys,keyChars,0,KEYBOARD_INPUT_HKL);
-			if (conversionResult == 1)
-			{
-				WORD unicodeChar;
-				MultiByteToWideChar(
-						KEYBOARD_INPUT_CODEPAGE,
-						MB_PRECOMPOSED, // default
-						(LPCSTR)keyChars,
-						sizeof(keyChars),
-						(WCHAR*)&unicodeChar,
-						1 );
-				event.KeyInput.Char = unicodeChar;
-			}
-			else
-				event.KeyInput.Char = 0;
-
 			// allow composing characters like '@' with Alt Gr on non-US keyboards
 			if ((allKeys[VK_MENU] & 0x80) != 0)
 				event.KeyInput.Control = 0;
@@ -826,10 +839,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (dev)
 				dev->postEventFromUser(event);
 
-			if (message == WM_SYSKEYDOWN || message == WM_SYSKEYUP)
-				return DefWindowProc(hWnd, message, wParam, lParam);
-			else
-				return 0;
+			break;
 		}
 
 	case WM_SIZE:
@@ -904,6 +914,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		KEYBOARD_INPUT_HKL = GetKeyboardLayout(0);
 		KEYBOARD_INPUT_CODEPAGE = LocaleIdToCodepage( LOWORD(KEYBOARD_INPUT_HKL) );
 		return 0;
+
+	case WM_IME_STARTCOMPOSITION:
+		{
+			dev = getDeviceFromHWnd(hWnd);
+			irr::gui::IGUIElement* ele = dev->getGUIEnvironment()->getFocus();
+			if (!ele)
+				break;
+			irr::core::position2di pos = ele->getAbsolutePosition().UpperLeftCorner;
+			HIMC hIMC = ImmGetContext(hWnd);
+			COMPOSITIONFORM CompForm = { CFS_POINT, { pos.X, pos.Y + ele->getAbsolutePosition().getHeight() } };
+			ImmSetCompositionWindow(hIMC, &CompForm);
+			ImmReleaseContext(hWnd, hIMC);
+		}
+		break;
 	}
 	return DefWindowProc(hWnd, message, wParam, lParam);
 }
@@ -1797,8 +1821,7 @@ void CIrrDeviceWin32::handleSystemMessages()
 
 	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 	{
-		// No message translation because we don't use WM_CHAR and it would conflict with our
-		// deadkey handling.
+		TranslateMessage(&msg);
 
 		if (ExternalWindow && msg.hwnd == HWnd)
 			WndProc(HWnd, msg.message, msg.wParam, msg.lParam);

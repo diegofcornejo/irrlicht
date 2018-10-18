@@ -394,6 +394,7 @@ bool CGUIEnvironment::OnEvent(const SEvent& event)
 	if (UserReceiver
 		&& (event.EventType != EET_MOUSE_INPUT_EVENT)
 		&& (event.EventType != EET_KEY_INPUT_EVENT)
+		&& (event.EventType != EET_CHAR_INPUT_EVENT)
 		&& (event.EventType != EET_GUI_EVENT || event.GUIEvent.Caller != this))
 	{
 		ret = UserReceiver->OnEvent(event);
@@ -597,6 +598,12 @@ bool CGUIEnvironment::postEventFromUser(const SEvent& event)
 				}
 			}
 
+		}
+		break;
+	case EET_CHAR_INPUT_EVENT:
+		{
+			if (Focus && Focus->OnEvent(event))
+				return true;
 		}
 		break;
 	default:

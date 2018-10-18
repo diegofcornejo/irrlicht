@@ -303,7 +303,10 @@ bool CGUIListBox::OnEvent(const SEvent& event)
 				}
 				return true;
 			}
-			else if (event.KeyInput.PressedDown && event.KeyInput.Char)
+			break;
+
+		case EET_CHAR_INPUT_EVENT:
+			if (event.CharInput.Char)
 			{
 				// change selection based on text as it is typed.
 				u32 now = os::Timer::getTime();
@@ -311,16 +314,16 @@ bool CGUIListBox::OnEvent(const SEvent& event)
 				if (now - LastKeyTime < 500)
 				{
 					// add to key buffer if it isn't a key repeat
-					if (!(KeyBuffer.size() == 1 && KeyBuffer[0] == event.KeyInput.Char))
+					if (!(KeyBuffer.size() == 1 && KeyBuffer[0] == event.CharInput.Char))
 					{
 						KeyBuffer += L" ";
-						KeyBuffer[KeyBuffer.size()-1] = event.KeyInput.Char;
+						KeyBuffer[KeyBuffer.size()-1] = event.CharInput.Char;
 					}
 				}
 				else
 				{
 					KeyBuffer = L" ";
-					KeyBuffer[0] = event.KeyInput.Char;
+					KeyBuffer[0] = event.CharInput.Char;
 				}
 				LastKeyTime = now;
 

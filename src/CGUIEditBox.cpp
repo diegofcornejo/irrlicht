@@ -240,6 +240,9 @@ bool CGUIEditBox::OnEvent(const SEvent& event)
 			if (processKey(event))
 				return true;
 			break;
+		case EET_CHAR_INPUT_EVENT:
+			inputChar(event.CharInput.Char);
+			return true;
 		case EET_MOUSE_INPUT_EVENT:
 			if (processMouse(event))
 				return true;
@@ -266,13 +269,6 @@ bool CGUIEditBox::processKey(const SEvent& event)
 
 	if (event.KeyInput.Control)
 	{
-		// german backlash '\' entered with control + '?'
-		if ( event.KeyInput.Char == '\\' )
-		{
-			inputChar(event.KeyInput.Char);
-			return true;
-		}
-
 		switch(event.KeyInput.Key)
 		{
 		case KEY_KEY_A:
@@ -686,7 +682,6 @@ bool CGUIEditBox::processKey(const SEvent& event)
 		return false;
 
 	default:
-		inputChar(event.KeyInput.Char);
 		return true;
 	}
 
