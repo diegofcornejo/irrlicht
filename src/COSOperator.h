@@ -30,8 +30,7 @@ public:
 	virtual void copyToClipboard(const wchar_t* text) const;
 
 	//! gets text from the clipboard
-	//! \return Returns 0 if no string is in there.
-	virtual const wchar_t* getTextFromClipboard() const;
+	virtual const core::stringw getTextFromClipboard() const;
 
 	//! gets the processor speed in megahertz
 	//! \param Mhz:

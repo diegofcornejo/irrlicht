@@ -1042,9 +1042,13 @@ bool CIrrDeviceLinux::run()
 					char buf[8]={0};
 					XLookupString(&event.xkey, buf, sizeof(buf), &mp.X11Key, NULL);
 
-					irrevent.EventType = irr::EET_CHAR_INPUT_EVENT;
-					irrevent.CharInput.Char = irr::core::stringw(buf).c_str();
-					postEventFromUser(irrevent);
+					if(event.type == KeyPress
+					    && !(buf[0] < 32 || buf[0] > 126 && buf[0] < 160))
+					{
+					    irrevent.EventType = irr::EET_CHAR_INPUT_EVENT;
+					    irrevent.CharInput.Char = irr::core::stringw(buf).c_str()[0];
+					    postEventFromUser(irrevent);
+					}
 
 					irrevent.EventType = irr::EET_KEY_INPUT_EVENT;
 					irrevent.KeyInput.PressedDown = (event.type == KeyPress);
@@ -1877,7 +1881,7 @@ const c8* CIrrDeviceLinux::getTextFromClipboard() const
 	Clipboard = "";
 	if (ownerWindow != None )
 	{
-		XConvertSelection (display, X_ATOM_CLIPBOARD, XA_STRING, XA_PRIMARY, ownerWindow, CurrentTime);
+		XConvertSelection (display, X_ATOM_CLIPBOARD, X_ATOM_UTF8_STRING, XA_PRIMARY, ownerWindow, CurrentTime);
 		XFlush (display);
 
 		// check for data

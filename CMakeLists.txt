@@ -156,7 +156,7 @@ set (INCLUDE_FILES_GUI
     "include/EMessageBoxFlags.h"
     "include/ICursorControl.h"
     "include/IGUIButton.h"
-    "include/IGUICheckbox.h"
+    "include/IGUICheckBox.h"
     "include/IGUIComboBox.h"
     "include/IGUIContextMenu.h"
     "include/IGUIEditBox.h"
@@ -827,7 +827,7 @@ set (SRC_FILES_GUI
     "src/BuiltInFont.h"
     "src/CDefaultGUIElementFactory.h"
     "src/CGUIButton.h"
-    "src/CGUICheckbox.h"
+    "src/CGUICheckBox.h"
     "src/CGUIColorSelectDialog.h"
     "src/CGUIComboBox.h"
     "src/CGUIContextMenu.h"
@@ -855,7 +855,7 @@ set (SRC_FILES_GUI
     "src/CGUIWindow.h"
 	"src/CDefaultGUIElementFactory.cpp"
 	"src/CGUIButton.cpp"
-	"src/CGUICheckbox.cpp"
+	"src/CGUICheckBox.cpp"
 	"src/CGUIColorSelectDialog.cpp"
 	"src/CGUIComboBox.cpp"
 	"src/CGUIContextMenu.cpp"
@@ -898,12 +898,14 @@ include_directories ( include src/zlib src/jpeglib src/libpng )
 
 add_definitions ("-D_IRR_STATIC_LIB_")
 
+if (CMAKE_C_COMPILER MATCHES "cc")
+	add_definitions ("-U__STRICT_ANSI__")
+endif ()
+
 if (WIN32)
 	include_directories ( $ENV{DXSDK_DIR}/include )
 	if (MSVC)
         add_definitions ("-DIRRLICHT_FAST_MATH")
-	elseif (MINGW)
-		add_definitions ("-U__STRICT_ANSI__")
 	endif ()
 endif ()
 

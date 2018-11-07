@@ -92,14 +92,13 @@ void COSOperator::copyToClipboard(const wchar_t* text) const
 
 
 //! gets text from the clipboard
-//! \return Returns 0 if no string is in there.
-const wchar_t* COSOperator::getTextFromClipboard() const
+const core::stringw COSOperator::getTextFromClipboard() const
 {
 #if defined(_IRR_XBOX_PLATFORM_)
 		return 0;
 #elif defined(_IRR_WINDOWS_API_)
 	if (!OpenClipboard(NULL))
-		return 0;
+		return L"";
 
 	wchar_t * buffer = 0;
 
@@ -110,11 +109,11 @@ const wchar_t* COSOperator::getTextFromClipboard() const
 	return buffer;
 
 #elif defined(_IRR_COMPILE_WITH_OSX_DEVICE_)
-	return irr::core::stringw(OSXCopyFromClipboard()).c_str();
+	return irr::core::stringw(OSXCopyFromClipboard());
 
 #elif defined(_IRR_COMPILE_WITH_X11_DEVICE_)
     if ( IrrDeviceLinux )
-        return irr::core::stringw(IrrDeviceLinux->getTextFromClipboard()).c_str();
+        return irr::core::stringw(IrrDeviceLinux->getTextFromClipboard());
     return 0;
 
 #else

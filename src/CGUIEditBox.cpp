@@ -326,11 +326,9 @@ bool CGUIEditBox::processKey(const SEvent& event)
 				const s32 realmend = MarkBegin < MarkEnd ? MarkEnd : MarkBegin;
 
 				// add new character
-				const wchar_t* p = Operator->getTextFromClipboard();
-				if (p)
+				const irr::core::stringw widep = Operator->getTextFromClipboard();
+				if (!widep.empty())
 				{
-					irr::core::stringw widep(p);
-
 					if (MarkBegin == MarkEnd)
 					{
 						// insert text
