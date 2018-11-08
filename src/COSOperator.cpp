@@ -95,7 +95,7 @@ void COSOperator::copyToClipboard(const wchar_t* text) const
 const core::stringw COSOperator::getTextFromClipboard() const
 {
 #if defined(_IRR_XBOX_PLATFORM_)
-		return 0;
+		return L"";
 #elif defined(_IRR_WINDOWS_API_)
 	if (!OpenClipboard(NULL))
 		return L"";
@@ -109,16 +109,16 @@ const core::stringw COSOperator::getTextFromClipboard() const
 	return buffer;
 
 #elif defined(_IRR_COMPILE_WITH_OSX_DEVICE_)
-	return irr::core::stringw(OSXCopyFromClipboard());
+	return OSXCopyFromClipboard();
 
 #elif defined(_IRR_COMPILE_WITH_X11_DEVICE_)
     if ( IrrDeviceLinux )
-        return irr::core::stringw(IrrDeviceLinux->getTextFromClipboard());
-    return 0;
+        return IrrDeviceLinux->getTextFromClipboard();
+    return L"";
 
 #else
 
-	return 0;
+	return L"";
 #endif
 }
 
